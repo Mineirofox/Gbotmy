@@ -1,0 +1,2 @@
+# Gbotmy
+Um bot sensacional
