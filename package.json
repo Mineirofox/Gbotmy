@@ -1,0 +1,22 @@
+{
+  "name": "whatsapp-gpt-bot",
+  "version": "1.0.0",
+  "description": "Bot de WhatsApp com GPT-4, Whisper e lembretes persistentes.",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "dependencies": {
+    "@hapi/boom": "^10.0.1",
+    "@whiskeysockets/baileys": "^6.7.2",
+    "chrono-node": "^2.7.6",
+    "dotenv": "^16.4.5",
+    "mammoth": "^1.7.2",
+    "node-schedule": "^2.1.1",
+    "openai": "^4.52.7",
+    "pdf-parse": "^1.1.1",
+    "qrcode-terminal": "^0.12.0"
+  }
+}
