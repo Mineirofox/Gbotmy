@@ -163,3 +163,19 @@ export async function cancelReminder(sender, text) {
   await removeReminder(found.id);
   return `❌ Lembrete cancelado: *${found.message}*`;
 }
+
+// 🔹 NOVA FUNÇÃO: apagar todos os lembretes do usuário
+export async function clearAllReminders(sender) {
+  const reminders = await loadReminders();
+  const userReminders = reminders.filter(r => r.sender === sender);
+
+  if (userReminders.length === 0) {
+    return '🙌 Você não tem lembretes para apagar.';
+  }
+
+  for (const r of userReminders) {
+    await removeReminder(r.id);
+  }
+
+  return `🗑️ Todos os seus ${userReminders.length} agendamentos foram apagados.`;
+}

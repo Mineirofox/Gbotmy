@@ -12,8 +12,8 @@ import fs from 'fs/promises';
 import path from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import * as chrono from 'chrono-node';   // ✅ import completo
-import { addReminder, restoreReminders, listReminders, cancelReminder } from './reminderManager.js';
+import { addReminder, restoreReminders, listReminders, cancelReminder, clearAllReminders } from './reminderManager.js';
+import { isReminderRequest, parseReminderRequest } from './reminderParser.js';
 
 const execAsync = promisify(exec);
 
@@ -23,31 +23,6 @@ const MAX_FILE_SIZE_MB = 15;
 
 const mediaDir = path.join('./media');
 await fs.mkdir(mediaDir, { recursive: true });
-
-// -------------------------------------------
-// 🔎 Expressões que disparam lembrete
-// -------------------------------------------
-const reminderTriggers = [
-  "me lembre",
-  "não me deixe esquecer",
-  "nao me deixe esquecer",
-  "me avise",
-  "me recorde",
-  "me faça lembrar",
-  "me faca lembrar",
-  "me cobre",
-  "me alerta",
-  "não esqueça de",
-  "nao esqueça de"
-];
-
-function isReminderRequest(text) {
-  if (!text) return false;
-  const lower = text.toLowerCase();
-  return reminderTriggers.some(trigger => lower.includes(trigger));
-}
-
-// -------------------------------------------
 
 async function convertToMp3(inputPath) {
   const outputPath = inputPath.replace(/\.\w+$/, '.mp3');
@@ -150,64 +125,29 @@ async function startBot() {
         // ---------------------------
         // 🕒 SISTEMA DE LEMBRETES
         // ---------------------------
-
         if (isReminderRequest(text)) {
-          let parsedDate;
-          const lower = text.toLowerCase();
+          const result = parseReminderRequest(text);
 
-          // 1) Detecta "em X minutos" ou "daqui a X minutos"
-          let match = lower.match(/(?:em|daqui a)\s+(\d+)\s*min(uto|utos)?/);
-          if (match) {
-            const minutes = parseInt(match[1], 10);
-            parsedDate = new Date(Date.now() + minutes * 60 * 1000);
-          }
-
-          // 2) Detecta "em X horas" ou "daqui a X horas"
-          if (!parsedDate) {
-            match = lower.match(/(?:em|daqui a)\s+(\d+)\s*h(ora|oras)?/);
-            if (match) {
-              const hours = parseInt(match[1], 10);
-              parsedDate = new Date(Date.now() + hours * 60 * 60 * 1000);
-            }
-          }
-
-          // 3) Se não caiu nos casos manuais, usa chrono
-          if (!parsedDate) {
-            const results = chrono.parse(text, new Date(), { forwardDate: true });
-            if (!results || results.length === 0) {
-              await sock.sendMessage(sender, { text: '🤔 Não consegui entender a data/hora do lembrete. Exemplo: "Me avise amanhã às 14h de ligar para João".' });
-              continue;
-            }
-
-            parsedDate = results[0].start.date();
-
-            // Força HOJE se não mencionou dia/mês/ano
-            const hasExplicitDay =
-              results[0].start.isCertain('day') ||
-              results[0].start.isCertain('month') ||
-              results[0].start.isCertain('year');
-
-            if (!hasExplicitDay) {
-              const now = new Date();
-              parsedDate.setFullYear(now.getFullYear(), now.getMonth(), now.getDate());
-            }
-          }
-
-          const reminderMessage = text.replace(/(me lembre|não me deixe esquecer|nao me deixe esquecer|me avise|me recorde|me faça lembrar|me faca lembrar|me cobre|me alerta|não esqueça de|nao esqueça de).*?(de|que)?\s*/i, '').trim();
-
-          if (!reminderMessage) {
-            await sock.sendMessage(sender, { text: '⚠️ Você precisa me dizer o que lembrar. Exemplo: "Me avise amanhã às 10h de pagar a conta".' });
+          if (result?.error) {
+            await sock.sendMessage(sender, { text: result.error });
             continue;
           }
 
-          const newReminder = await addReminder(sock, sender, parsedDate, reminderMessage);
+          const { date, message: reminderMessage } = result;
+          const newReminder = await addReminder(sock, sender, date, reminderMessage);
 
-          // confirmação humanizada pela IA
           await sock.sendMessage(sender, { text: newReminder.confirmation });
           continue;
         }
 
         if (text?.toLowerCase().includes('meus lembretes')) {
+          const reply = await listReminders(sender);
+          await sock.sendMessage(sender, { text: reply });
+          continue;
+        }
+
+        // 👉 Novo comando: "listar agendamentos"
+        if (text?.toLowerCase().includes('listar agendamentos')) {
           const reply = await listReminders(sender);
           await sock.sendMessage(sender, { text: reply });
           continue;
@@ -219,10 +159,16 @@ async function startBot() {
           continue;
         }
 
+        // 👉 Novo comando: "apagar agendamentos"
+        if (text?.toLowerCase().includes('apagar agendamentos')) {
+          const reply = await clearAllReminders(sender);
+          await sock.sendMessage(sender, { text: reply });
+          continue;
+        }
+
         // ---------------------------
         // 🚀 Fluxo normal para GPT
         // ---------------------------
-
         if (text) {
           if (!conversationHistories.has(sender)) conversationHistories.set(sender, []);
           const userHistory = conversationHistories.get(sender);
