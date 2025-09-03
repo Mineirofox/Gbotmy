@@ -21,7 +21,7 @@ if (!process.env.OPENAI_API_KEY) {
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-export async function askGpt4(messageHistory, imageBuffer = null) {
+export async function askGpt5(messageHistory, imageBuffer = null) {
   try {
     const messagesPayload = [
       { role: 'system', content: openAIConfig.systemPrompt },
@@ -39,9 +39,9 @@ export async function askGpt4(messageHistory, imageBuffer = null) {
     }
 
     const completion = await openai.chat.completions.create({
-      model: openAIConfig.model || 'gpt-4o-mini',
-      temperature: openAIConfig.temperature ?? 0.7,
-      max_tokens: openAIConfig.max_tokens ?? 1024,
+      model: openAIConfig.model || 'gpt-5-mini',
+      temperature: openAIConfig.temperature ?? 1,
+      max_completion_tokens: openAIConfig.max_completion_tokens ?? 1024,
       messages: messagesPayload,
     });
 

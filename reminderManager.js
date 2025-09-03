@@ -1,7 +1,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 import schedule from 'node-schedule';
-import { askGpt4 } from './openai.js'; // IA da OpenAI
+import { askGpt5 } from './openai.js'; // IA da OpenAI
 
 const dataDir = path.join('./data');
 const remindersFile = path.join(dataDir, 'reminders.json');
@@ -34,7 +34,6 @@ function scheduleJob(sock, reminder) {
   schedule.scheduleJob(reminder.id, when, async () => {
     console.log(`🚀 [Disparado] "${reminder.message}" - ${new Date().toLocaleString('pt-BR')}`);
     try {
-      // IA gera a mensagem humanizada
       const gptPrompt = [
         {
           role: 'system',
@@ -47,7 +46,7 @@ function scheduleJob(sock, reminder) {
         }
       ];
 
-      const aiReply = await askGpt4(gptPrompt);
+      const aiReply = await askGpt5(gptPrompt);
 
       await sock.sendMessage(reminder.sender, { text: aiReply });
       await removeReminder(reminder.id);
@@ -95,7 +94,7 @@ export async function addReminder(sock, sender, date, message) {
   }
 
   if (reminderDate <= new Date()) {
-    reminderDate = new Date(Date.now() + 60 * 1000); // 1 minuto no futuro
+    reminderDate = new Date(Date.now() + 60 * 1000);
     console.log('⚠️ Ajustei a data, estava no passado:', reminderDate.toLocaleString('pt-BR'));
   }
 
@@ -112,7 +111,6 @@ export async function addReminder(sock, sender, date, message) {
 
   scheduleJob(sock, { ...newReminder, date: reminderDate });
 
-  // IA gera a confirmação humanizada
   const gptPrompt = [
     {
       role: 'system',
@@ -125,7 +123,7 @@ export async function addReminder(sock, sender, date, message) {
     }
   ];
 
-  const confirmation = await askGpt4(gptPrompt);
+  const confirmation = await askGpt5(gptPrompt);
 
   return { ...newReminder, confirmation };
 }
@@ -164,7 +162,6 @@ export async function cancelReminder(sender, text) {
   return `❌ Lembrete cancelado: *${found.message}*`;
 }
 
-// 🔹 NOVA FUNÇÃO: apagar todos os lembretes do usuário
 export async function clearAllReminders(sender) {
   const reminders = await loadReminders();
   const userReminders = reminders.filter(r => r.sender === sender);

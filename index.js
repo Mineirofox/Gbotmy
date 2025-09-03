@@ -5,7 +5,7 @@ import {
   downloadMediaMessage,
   DisconnectReason
 } from '@whiskeysockets/baileys';
-import { askGpt4, transcribeAudio } from './openai.js';
+import { askGpt5, transcribeAudio } from './openai.js';
 import { extractTextFromFile } from './fileProcessor.js';
 import qrcode from 'qrcode-terminal';
 import fs from 'fs/promises';
@@ -146,7 +146,6 @@ async function startBot() {
           continue;
         }
 
-        // 👉 Novo comando: "listar agendamentos"
         if (text?.toLowerCase().includes('listar agendamentos')) {
           const reply = await listReminders(sender);
           await sock.sendMessage(sender, { text: reply });
@@ -159,7 +158,6 @@ async function startBot() {
           continue;
         }
 
-        // 👉 Novo comando: "apagar agendamentos"
         if (text?.toLowerCase().includes('apagar agendamentos')) {
           const reply = await clearAllReminders(sender);
           await sock.sendMessage(sender, { text: reply });
@@ -182,7 +180,7 @@ async function startBot() {
           const payloadForGpt = isFileAnalysis ? [{ role: 'user', content: text }] : userHistory;
 
           console.log(`[${sender}] 🚀 Enviando para o GPT...`);
-          const reply = await askGpt4(payloadForGpt, imageBuffer);
+          const reply = await askGpt5(payloadForGpt, imageBuffer);
 
           userHistory.push({ role: 'assistant', content: reply });
           while (userHistory.length > CONTEXT_WINDOW_MESSAGES) userHistory.shift();
